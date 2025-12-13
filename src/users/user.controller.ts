@@ -1,7 +1,6 @@
 import { Controller, Get, Post, Body, Patch, Param, Delete, ConflictException, HttpStatus, Query, NotFoundException, UseGuards } from '@nestjs/common';
 import { UserService } from './user.service';
-import { userDTO } from './dto/userDto';
-import { JwtAuthGuard } from 'src/auth/guard/auth.guard';
+import { userDTO } from './dto/user-dto';
 
 @Controller('user')
 export class UserController {
@@ -24,23 +23,17 @@ export class UserController {
 
   @Get('/find')
   async findBy(@Query('id')id: number, @Query('email')email: string, @Query('name')name: string){
-    let user;
-    if(id != null) { user = await this.userService.findById(id); }
-    else if (email != null) { user = await this.userService.findByEmail(email); }
-    else if (name != null)  { user = await this.userService.findByName(name); }
-    else { user = await this.userService.findAll();}
-
-    if(!user) { throw new NotFoundException("해당 유저를 찾을 수 없습니다."); }
-    else { return user; }
+    if(id != null) { return await this.userService.findById(id); }
+    else if (email != null) { return await this.userService.findByEmail(email); }
+    else if (name != null)  { return await this.userService.findByName(name); }
+    else { return await this.userService.findAll();}
   }
 
-  @UseGuards(JwtAuthGuard)
   @Patch(':id')
   async update(@Param('id')id: number, @Body()updateDto: userDTO.update){
     return this.userService.update(id, updateDto);
   }
 
-  @UseGuards(JwtAuthGuard)
   @Delete(':id')
   async delete(@Param('id')id: number){
     await this.userService.delete(id);

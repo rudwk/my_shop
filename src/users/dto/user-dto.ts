@@ -32,5 +32,14 @@ export namespace userDTO {
     password: string;
   }
 
-  export class update extends PartialType(SignUp){}
+  export class update {
+    @IsString()
+    password?: string;
+
+    @IsString()
+    name?: string;
+
+    @IsString()
+    address?: string;
+  }
 }

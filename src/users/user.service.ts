@@ -3,7 +3,7 @@ import { JwtService } from '@nestjs/jwt';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { User } from './entities/user.entity';
-import { userDTO } from './dto/userDto';
+import { userDTO } from './dto/user-dto';
 import * as bcrypt from 'bcrypt';
 import { AuthService } from 'src/auth/auth.service';
 
@@ -28,6 +28,7 @@ export class UserService {
     return await this.userRepository.save(userEntity);
   }
 
+  
   //로그인
   async signin(userDTO: userDTO.SignIn){
     const { email, password } = userDTO;
@@ -48,32 +49,47 @@ export class UserService {
   }
 
   //회원 조회
-  async findById(id: number){
-    return this.userRepository.findOne({where: {id}});
+  findById(id: number){
+    const user = this.userRepository.findOne({where: {id}});
+    return this.isUser(user);
   }
 
-  async findByEmail(email: string){
-    return this.userRepository.findOne({where: {email}});
+  findByEmail(email: string){
+    const user = this.userRepository.findOne({where: {email}});
+    return this.isUser(user);
   }
   
-  async findByName(name: string){
-    return this.userRepository.find({where: {name: name}});
+  findByName(name: string){
+    const user = this.userRepository.find({where: {name: name}});
   }
   
-  async findAll(){
+  findAll(){
     return this.userRepository.find();
   }
 
+  isUser(user: Promise<User>) {
+    if(!user) {throw new NotFoundException("해당 유저를 찾을 수 없습니다."); }
+    else { return user; }
+  }
+
   // 회원 정보 수정
-  async update(id: number,updateDto: userDTO.update ) {
-    const user = await this.findById(id);
+  update(id: number,updateDto: userDTO.update ) {
+    const user = this.findById(id);
     if(user == null) { throw new NotFoundException("해당 유저를 찾을 수 없습니다."); }
 
-    return this.userRepository.update(id, updateDto);
+    try{
+      this.userRepository.update(id, updateDto);
+      return {
+        status: 200,
+        message: "성공적으로 수정되었습니다"
+      }
+    } catch(e) {
+      throw new e;
+    }
   }
 
   //회원 탈퇴
-  async delete(id){
+  delete(id){
     return this.userRepository.delete(id);
   }
 }
