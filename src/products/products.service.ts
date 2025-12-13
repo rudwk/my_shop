@@ -1,5 +1,5 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
-import { productDTO } from './dto/productDto';
+import { productDTO } from './dto/product-dto';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Product } from './entities/product.entity';
 import { Repository } from 'typeorm';
@@ -11,31 +11,44 @@ export class ProductsService {
       private readonly productRepository: Repository<Product>,
     ){}
 
-  create(createProductDto: productDTO.createProduct) {
+  async create(createProductDto: productDTO.createProduct) {
     const userEntity = this.productRepository.create(createProductDto);
     return this.productRepository.save(userEntity);
   }
 
-  findAll() {
+  async findAll() {
     return this.productRepository.find()
   }
 
-  findById(id: number) {
-    return this.productRepository.find({where: {id}})
+  async findById(id: number) {
+    return this.productRepository.findOne({where: {id}})
   }
 
-  findByName(name: string) {
+  async findByName(name: string) {
     return this.productRepository.find({where: {name}})
   }
 
-  update(id: number, updateProductDto: productDTO.updateProduct) {
+  async update(id: number, updateProductDto: productDTO.updateProduct) {
     const product = this.productRepository.find({where: {id}})
     if(product == null) { throw new NotFoundException('해당 상품을 찾지 못했습니다'); }
     
-    return this.productRepository.update(id, updateProductDto);
+    this.productRepository.update(id, updateProductDto);
+
+    return {
+      status:200,
+      message: "성공적으로 수정되었습니다"
+    }
   }
 
-  remove(id: number) {
-    const product = this.productRepository.find({where: {id}});
+  async remove(id: number) {
+    const product = await this.findById(id);
+    if(product == null) throw new NotFoundException('해당 상품을 찾을 수 없습니다.')
+
+    this.productRepository.delete(id);
+
+    return {
+      status: 200,
+      message: `성공적으로 상품을 제거했습니다`
+    }
   }
 }
