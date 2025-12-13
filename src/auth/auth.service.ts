@@ -10,7 +10,6 @@ export class AuthService {
   async createToken(id:number, role:string){
     const payload = {
       id: id,
-      role: role
     }
 
     const accsessToken = this.jwtService.sign(payload, {secret: process.env.JWT_SECRET_ACCSESS, expiresIn: '300s'});
