@@ -48,6 +48,12 @@ export class ProductsService {
     });
   }
 
+  async findByName(name: string) {
+    return this.productRepository.findOne({
+      where: { name },
+    });
+  }
+
   async update(
     productId: number,
     dto: productDTO.updateProduct,

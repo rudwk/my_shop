@@ -97,6 +97,21 @@ export class OrdersService {
     });
   }
 
+
+  async updateStatus(orderId: number, status: OrderStatus, isAdmin: boolean) {
+    const order = await this.orderRepository.findOne({
+      where: { id: orderId },
+    });
+    if (!order) {
+      throw new NotFoundException('주문을 찾을 수 없습니다.');
+    }
+    if(!isAdmin) {
+      throw new ForbiddenException('주문 상태 변경 권한이 없습니다.');
+    }
+    order.status = status;
+    return this.orderRepository.save(order);
+  }
+
   async cancel(orderId: number, userId: number, isAdmin: boolean) {
     const order = await this.orderRepository.findOne({
       where: { id: orderId },
