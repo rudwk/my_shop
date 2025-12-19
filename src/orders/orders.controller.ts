@@ -1,34 +1,36 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete } from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, Param, Delete, ParseIntPipe, UseGuards } from '@nestjs/common';
 import { OrdersService } from './orders.service';
-import { CreateOrderDto } from './dto/create-order.dto';
-import { UpdateOrderDto } from './dto/update-order.dto';
+import { JwtAuthGuard } from 'src/auth/jwt/jwt-auth.guard';
+import { CurrentUser } from 'src/auth/common/user.decorator';
+import { OrderStatus } from './entities/order.entity';
 
-@Controller('orders')
+@Controller('order')
 export class OrdersController {
   constructor(private readonly ordersService: OrdersService) {}
 
-  @Post()
-  create(@Body() createOrderDto: CreateOrderDto) {
-    return this.ordersService.create(createOrderDto);
+  @UseGuards(JwtAuthGuard)
+  @Post('/payment')
+  checkout(@CurrentUser()user) {
+    return this.ordersService.payment(user.id);
   }
 
+  @UseGuards(JwtAuthGuard)
   @Get()
-  findAll() {
-    return this.ordersService.findAll();
+  findAll(@CurrentUser()user) {
+    return this.ordersService.findAll(user.id);
   }
 
-  @Get(':id')
-  findOne(@Param('id') id: string) {
-    return this.ordersService.findOne(+id);
+  @UseGuards(JwtAuthGuard)
+  @Patch(':orderId/status/:status')
+  updateStatus(@CurrentUser()user, @Param('orderId', ParseIntPipe)orderId: number, @Param("status")status: OrderStatus){
+    const isAdmin = user.role === "ADMIN"
+    return this.ordersService.updateStatus(orderId, status);
   }
 
-  @Patch(':id')
-  update(@Param('id') id: string, @Body() updateOrderDto: UpdateOrderDto) {
-    return this.ordersService.update(+id, updateOrderDto);
-  }
-
-  @Delete(':id')
-  remove(@Param('id') id: string) {
-    return this.ordersService.remove(+id);
+  @UseGuards(JwtAuthGuard)
+  @Patch("/:orderId/cancel")
+  cancel(@CurrentUser() user, @Param('orderId')orderId: number){
+    const isAdmin = user.role === 'ADMIN';
+    return this.ordersService.cancel(orderId, user.id, isAdmin)
   }
 }
