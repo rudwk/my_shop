@@ -10,7 +10,6 @@ import { AuthModule } from 'src/auth/auth.module';
   imports: [
     TypeOrmModule.forFeature([User]),
     JwtModule.register({}),
-    AuthModule
   ],
   controllers: [UserController],
   providers: [UserService],

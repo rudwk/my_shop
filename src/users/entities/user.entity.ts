@@ -1,6 +1,7 @@
 import { BeforeInsert, Column, CreateDateColumn, Entity, OneToMany, PrimaryGeneratedColumn, Table } from "typeorm";
 import * as bcrypt from 'bcrypt';
 import { Cart } from "src/cart/entities/cart.entity";
+import { Order } from "src/orders/entities/order.entity";
 
 @Entity({name: 'users'})
 export class User {
@@ -16,7 +17,7 @@ export class User {
   @Column()
   name: string;
 
-  @Column({default: 'customer'})
+  @Column({default: 'CUSTOMER'})
   role: string;
 
   @Column()
@@ -27,6 +28,9 @@ export class User {
 
   @OneToMany(() => Cart, (cart) => cart.user, { cascade: true})
   cart: Cart[];
+
+  @OneToMany(() => Order, (order) => order.user, {cascade: true})
+  orders: Order;
 
   @BeforeInsert()
   private beforeInsert() {

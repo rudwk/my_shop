@@ -1,6 +1,9 @@
 import { Controller, Get, Post, Body, Patch, Param, Delete, ConflictException, HttpStatus, Query, NotFoundException, UseGuards } from '@nestjs/common';
 import { UserService } from './user.service';
-import { userDTO } from './dto/user-dto';
+import { userDTO } from './dto/user.dto';
+import { CurrentUser } from 'src/auth/common/user.decorator';
+import { JwtAuthGuard } from 'src/auth/jwt/jwt-auth.guard';
+import { UserResponseDto } from './dto/user-response.dto';
 
 @Controller('user')
 export class UserController {
@@ -8,12 +11,7 @@ export class UserController {
 
   @Post('/signup')
   async signup(@Body() userDTO: userDTO.SignUp) {
-    await this.userService.signup(userDTO);
-
-    return {
-      status: HttpStatus.CREATED,
-      message: "성공적으로 회원가입되었습니다"
-    };
+    return await this.userService.signup(userDTO);
   }
 
   @Post('/signin')
@@ -21,26 +19,32 @@ export class UserController {
     return this.userService.signin(userDTO);
   }
 
+  @UseGuards(JwtAuthGuard)
   @Get('/find')
   async findBy(@Query('id')id: number, @Query('email')email: string, @Query('name')name: string){
-    if(id != null) { return await this.userService.findById(id); }
-    else if (email != null) { return await this.userService.findByEmail(email); }
-    else if (name != null)  { return await this.userService.findByName(name); }
-    else { return await this.userService.findAll();}
-  }
-
-  @Patch(':id')
-  async update(@Param('id')id: number, @Body()updateDto: userDTO.update){
-    return this.userService.update(id, updateDto);
-  }
-
-  @Delete(':id')
-  async delete(@Param('id')id: number){
-    await this.userService.delete(id);
-
-    return {
-      status: 204,
-      message: "성공적으로 회원탈퇴하였습니다."
+    if(id != null) { return new UserResponseDto(await this.userService.findById(id)); }
+    else if (email != null) { return new UserResponseDto(await this.userService.findByEmail(email)); }
+    else if (name != null)  { 
+      const users = await this.userService.findByName(name); 
+      return users.map(user => new UserResponseDto(user))
     }
+  }
+
+  @Get('/find/all')
+  async findAll() {
+    const users = await this.userService.findAll();
+    return users.map(user => new UserResponseDto(user))
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Patch(':id')
+  async update(@CurrentUser() user, @Param("id")userId, @Body()updateDto: userDTO.update){
+    return this.userService.update(userId, updateDto, user);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Delete(':id')
+  delete(@Param('id')id: number, @CurrentUser()user){
+    return this.userService.delete(id, user);
   }
 }
