@@ -1,4 +1,8 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { CartDTO } from './dto/cart.dto';
 import { UserService } from 'src/users/user.service';
 import { InjectRepository } from '@nestjs/typeorm';
@@ -12,59 +16,82 @@ export class CartService {
     @InjectRepository(Cart)
     private readonly cartRepository: Repository<Cart>,
     private readonly userService: UserService,
-    private readonly productService: ProductsService
-  ){}
+    private readonly productService: ProductsService,
+  ) {}
 
   async addItem(userId: number, cartDto: CartDTO.cartAddDto) {
+    if (cartDto.quantity <= 0) {
+      throw new BadRequestException('수량은 1 이상이어야 합니다.');
+    }
+
     const user = await this.userService.findById(userId);
-    const product = await this.productService.findById(cartDto.productId)
-    if(!product) throw new NotFoundException("해당 상품을 찾을 수 없습니다.")
+    const product = await this.productService.findById(cartDto.productId);
 
     let item = await this.cartRepository.findOne({
-      where: { user: { id: userId }, product: { id: cartDto.productId } },
-      relations: ['product', 'user'],
+      where: {
+        user: { id: userId },
+        product: { id: cartDto.productId },
+      },
+      relations: ['user', 'product'],
     });
 
     if (item) {
       item.quantity += cartDto.quantity;
     } else {
-      item = this.cartRepository.create({ user, product, quantity: cartDto.quantity });
+      item = this.cartRepository.create({
+        user,
+        product,
+        quantity: cartDto.quantity,
+      });
     }
+
     return this.cartRepository.save(item);
   }
 
   async getCart(userId: number) {
-    return await this.cartRepository.find({ where: { user: { id: userId } }, relations: ['user'] });
+    return this.cartRepository.find({
+      where: { user: { id: userId } },
+      relations: ['user', 'product'],
+    });
   }
 
-  async hasItem(userId: number, productId: number) {
-    const item = await this.cartRepository.findOne({
-      where: { user: { id: userId }, product: { id: productId } },
-      relations: ['product', 'user'],
+  private async findItem(userId: number, productId: number) {
+    return this.cartRepository.findOne({
+      where: {
+        user: { id: userId },
+        product: { id: productId },
+      },
+      relations: ['user', 'product'],
     });
-
-    if(!item) { return null }
-    else { return item; }
   }
 
   async updateQuantity(userId: number, cartDto: CartDTO.quantityUpdateDto) {
-    const { productId, quantity } = cartDto;
-    const item = await this.hasItem(userId, productId);
-    if(item == null) { throw new NotFoundException("해당 상품을 찾을 수 없습니다"); }
+    if (cartDto.quantity <= 0) {
+      throw new BadRequestException('수량은 1 이상이어야 합니다.');
+    }
 
-    item.quantity = quantity;
+    const item = await this.findItem(userId, cartDto.productId);
+    if (!item) {
+      throw new NotFoundException('해당 상품이 장바구니에 없습니다.');
+    }
+
+    item.quantity = cartDto.quantity;
     return this.cartRepository.save(item);
   }
 
   async remove(userId: number, productId: number) {
-    const item = await this.hasItem(userId, productId);
-    if(item == null) { throw new NotFoundException("해당 상품을 찾을 수 없습니다"); }
+    const item = await this.findItem(userId, productId);
+    if (!item) {
+      throw new NotFoundException('해당 상품이 장바구니에 없습니다.');
+    }
 
-    return this.cartRepository.remove(item);
+    await this.cartRepository.remove(item);
   }
 
   async clear(userId: number) {
     const items = await this.getCart(userId);
-    await this.cartRepository.remove(items);
+    if (items.length) {
+      await this.cartRepository.remove(items);
+    }
   }
 }

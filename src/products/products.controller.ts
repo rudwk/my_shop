@@ -10,8 +10,8 @@ export class ProductsController {
 
   @UseGuards(JwtAuthGuard)
   @Post('/add')
-  async create(@Body() createProductDto: productDTO.createProduct) {
-    return await this.productsService.create(createProductDto);
+  async create(@Body() createProductDto: productDTO.createProduct, @CurrentUser() user) {
+    return await this.productsService.create(createProductDto, user.role);
   }
 
   @UseGuards(JwtAuthGuard)
@@ -30,11 +30,11 @@ export class ProductsController {
   @UseGuards(JwtAuthGuard)
   @Patch(':id')
   update(@Param('id') id: string, @Body() updateProductDto: productDTO.updateProduct, @CurrentUser() user) {
-    return this.productsService.update(+id, updateProductDto);
+    return this.productsService.update(+id, updateProductDto, user.role);
   }
 
   @Delete(':id')
-  remove(@Param('id') id: string) {
-    return this.productsService.remove(+id);
+  remove(@Param('id') id: string, @CurrentUser() user) {
+    return this.productsService.remove(+id, user.role);
   }
 }

@@ -24,7 +24,7 @@ export class OrdersController {
   @Patch(':orderId/status/:status')
   updateStatus(@CurrentUser()user, @Param('orderId', ParseIntPipe)orderId: number, @Param("status")status: OrderStatus){
     const isAdmin = user.role === "ADMIN"
-    return this.ordersService.updateStatus(orderId, status);
+    return this.ordersService.updateStatus(orderId, status, isAdmin);
   }
 
   @UseGuards(JwtAuthGuard)
