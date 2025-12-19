@@ -1,5 +1,6 @@
 import { PartialType } from "@nestjs/mapped-types";
-import { IsInt, IsString, Length } from "class-validator";
+import { IsInt, IsNotEmpty, IsString, Length } from "class-validator";
+import { IsNull } from "typeorm";
 
 export namespace productDTO {
   export class createProduct {
