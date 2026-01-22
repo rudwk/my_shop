@@ -5,7 +5,7 @@ import { IsNull } from "typeorm";
 export namespace productDTO {
   export class createProduct {
     @IsString()
-    @Length(1, 20)
+    @Length(1, 20, {message: "이름은 1자 이상 20자 이하로 입력해주세요."})
     name: string;
 
     @IsString()
