@@ -26,8 +26,7 @@ export class UserService {
     private readonly jwtService: JwtService,
   ) {}
 
-  /* ================= 회원가입 ================= */
-
+//회원가입
   async signup(dto: userDTO.SignUp) {
     const { email, password } = dto;
 
@@ -55,8 +54,7 @@ export class UserService {
     return this.createToken(user.id, user.role);
   }
 
-  /* ================= 로그인 ================= */
-
+//로그인
   async signin(dto: userDTO.SignIn) {
     const { email, password } = dto;
 
@@ -83,8 +81,7 @@ export class UserService {
     };
   }
 
-  /* ================= JWT 생성 ================= */
-
+//토큰 생성
   async createToken(userId: number, role: string) {
     const payload = {
       sub: userId,
@@ -104,8 +101,7 @@ export class UserService {
     return { accessToken, refreshToken };
   }
 
-  /* ================= 조회 ================= */
-
+//유저 조회
   async findById(id: number) {
     const user = await this.userRepository.findOne({
       where: { id },
@@ -134,8 +130,7 @@ export class UserService {
     return this.userRepository.find();
   }
 
-  /* ================= 유저 존재 여부 ================= */
-
+//유저 존재 여부 확인
   async exists(id: number): Promise<boolean> {
     const user = await this.userRepository.findOne({
       where: { id },
@@ -143,7 +138,7 @@ export class UserService {
     return !!user;
   }
 
-  /* ================= 회원 정보 수정 ================= */
+  //회원 정보 수정
 
   async update(
     targetUserId: number,
@@ -180,7 +175,7 @@ export class UserService {
     };
   }
 
-  /* ================= 회원 탈퇴 ================= */
+  //회원 탈퇴
 
   async delete(targetUserId: number, requester: User) {
     const exists = await this.exists(targetUserId);
