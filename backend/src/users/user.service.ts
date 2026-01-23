@@ -38,7 +38,7 @@ export class UserService {
       throw new ConflictException('이미 사용 중인 이메일입니다.');
     }
 
-    const hashedPassword = await bcrypt.hash(password, 10);
+    const hashedPassword = await bcrypt.hash(password+process.env.HASH_SALT, 10);
 
     const user = this.userRepository.create({
       ...dto,
@@ -66,7 +66,7 @@ export class UserService {
       throw new UnauthorizedException('이메일 또는 비밀번호가 올바르지 않습니다.');
     }
 
-    const isMatch = await bcrypt.compare(password, user.password);
+    const isMatch = await bcrypt.compare(password+process.env.HASH_SALT, user.password);
     if (!isMatch) {
       throw new UnauthorizedException('이메일 또는 비밀번호가 올바르지 않습니다.');
     }
@@ -139,7 +139,6 @@ export class UserService {
   }
 
   //회원 정보 수정
-
   async update(
     targetUserId: number,
     updateDto: userDTO.update,
