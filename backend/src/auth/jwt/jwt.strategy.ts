@@ -5,7 +5,7 @@ import { UserService } from 'src/users/user.service';
 require("dotenv").config();
 
 export interface JwtPayload {
-  id: number;
+  sub: number;
   role: string;
 }
 
@@ -14,13 +14,12 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
   constructor(private userService: UserService) {
     super({
       jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
-      ignoreExpiration: false,
       secretOrKey: process.env.JWT_SECRET_ACCESS
     });
   }
 
   async validate(payload: JwtPayload) {
-    return await this.userService.findById(payload.id);
+    return await this.userService.findById(payload.sub);
   }
 }
 

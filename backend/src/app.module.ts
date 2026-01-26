@@ -14,6 +14,7 @@ import { Order } from './orders/entities/order.entity';
 import { OrderItem } from './orders/entities/order-item.entity';
 import { MailerModule } from '@nestjs-modules/mailer';
 import { HandlebarsAdapter } from '@nestjs-modules/mailer/dist/adapters/handlebars.adapter';
+import { RedisModule } from '@nestjs-modules/ioredis';
 require('dotenv').config();
 
 
@@ -29,25 +30,14 @@ require('dotenv').config();
     entities: [User, Product, Cart, Order, OrderItem],
     synchronize: true
   }),
-  // MailerModule.forRootAsync({
-  //   useFactory: () => ({
-  //     transport: 'smtps://user@domain.com:pass@smtp.domain.com',
-  //     defaults: {
-  //       from: '"nest-modules" <modules@nestjs.com>',
-  //     },
-  //     template: {
-  //       dir: __dirname + '/templates',
-  //       adapter: new HandlebarsAdapter(),
-  //       options: {
-  //         strict: true,
-  //       },
-  //     }
-  //   })
-  // }),
-    ProductsModule,
-    AuthModule,
-    CartModule,
-    OrdersModule
+  RedisModule.forRoot({
+      type: 'single',
+      url: "localhost:6379",
+    }),
+  ProductsModule,
+  AuthModule,
+  CartModule,
+  OrdersModule
   ],
   controllers: [AppController],
   providers: [AppService],
