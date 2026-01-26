@@ -27,6 +27,10 @@ export class CartService {
     const user = await this.userService.findById(userId);
     const product = await this.productService.findById(cartDto.productId);
 
+    if(product.stock < cartDto.quantity + (await this.findItem(userId, cartDto.productId))?.quantity) {
+      throw new BadRequestException('재고가 부족합니다.');
+    }
+
     let item = await this.cartRepository.findOne({
       where: {
         user: { id: userId },

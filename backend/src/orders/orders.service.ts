@@ -29,67 +29,18 @@ export class OrdersService {
     private readonly userService: UserService,
   ) {}
 
+  // 결제 
   async payment(userId: number) {
-    return this.dataSource.transaction(async (manager) => {
-      const user = await this.userService.findById(userId);
-      const cartItems = await this.cartService.getCart(userId);
+    const cartItems = await this.cartService.getCart(userId);
+    if (cartItems.length === 0) {
+      throw new BadRequestException('장바구니가 비어 있습니다.');
+    }
 
-      if (!cartItems.length) {
-        throw new BadRequestException('장바구니에 상품이 없습니다.');
-      }
-
-      const productIds = cartItems.map((c) => c.product.id);
-      const products = await manager.getRepository(Product).find({
-        where: { id: In(productIds) },
-        lock: { mode: 'pessimistic_write' },
-      });
-
-      const productMap = new Map<number, Product>();
-      products.forEach((p) => productMap.set(p.id, p));
-
-      for (const item of cartItems) {
-        const product = productMap.get(item.product.id);
-        if (!product || product.stock < item.quantity) {
-          throw new BadRequestException('재고가 부족한 상품이 있습니다.');
-        }
-      }
-
-      const order = manager.getRepository(Order).create({
-        user,
-        status: OrderStatus.PAID,
-        total: 0,
-        items: [],
-      });
-
-      await manager.getRepository(Order).save(order);
-
-      let total = 0;
-
-      for (const item of cartItems) {
-        const product = productMap.get(item.product.id);
-
-        product.stock -= item.quantity;
-        await manager.getRepository(Product).save(product);
-
-        const orderItem = manager.getRepository(OrderItem).create({
-          order,
-          product,
-          quantity: item.quantity,
-          price: Number(product.price),
-        });
-
-        total += Number(product.price) * item.quantity;
-        await manager.getRepository(OrderItem).save(orderItem);
-      }
-
-      order.total = total;
-      await manager.getRepository(Order).save(order);
-
-      await this.cartService.clear(userId);
-      return order;
-    });
+    console.log('cartItems:', cartItems);
+    return { message: '결제 처리 로직이 아직 구현되지 않았습니다.' };
   }
 
+  //주문 내역 조회
   findAll(userId: number) {
     return this.orderRepository.find({
       where: { user: { id: userId } },
@@ -97,7 +48,7 @@ export class OrdersService {
     });
   }
 
-
+ //주문 상태 수정
   async updateStatus(orderId: number, status: OrderStatus, isAdmin: boolean) {
     const order = await this.orderRepository.findOne({
       where: { id: orderId },
@@ -112,6 +63,7 @@ export class OrdersService {
     return this.orderRepository.save(order);
   }
 
+  //주문 취소
   async cancel(orderId: number, userId: number, isAdmin: boolean) {
     const order = await this.orderRepository.findOne({
       where: { id: orderId },
