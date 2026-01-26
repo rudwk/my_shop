@@ -4,11 +4,11 @@ import { Column, CreateDateColumn, Entity, ManyToOne, OneToMany, PrimaryGenerate
 import { OrderItem } from "./order-item.entity";
 
 export enum OrderStatus {
-  PENDING = 'PENDING',
-  PAID = 'PAID',
-  SHIPPED = 'SHIPPED',
-  DELIVERED = 'DELIVERED',
-  CANCELLED = 'CANCELLED'
+  PENDING = 'PENDING', // 주문 접수
+  PAID = 'PAID', // 결제 완료
+  SHIPPED = 'SHIPPED', // 배송 중
+  DELIVERED = 'DELIVERED', // 배송 완료
+  CANCELLED = 'CANCELLED' // 주문 취소
 }
 
 @Entity('orders')
@@ -19,7 +19,7 @@ export class Order {
   @Column()
   total: number;
 
-  @Column({default: "PENDING"})
+  @Column({default: OrderStatus.PENDING})
   status: string;
 
   @CreateDateColumn()

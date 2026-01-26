@@ -77,8 +77,6 @@ export class UserService {
     const tokens = await this.createToken(user.id, user.role);
 
     return {
-      status: HttpStatus.OK,
-      message: '성공적으로 로그인되었습니다.',
       accessToken: tokens.accessToken,
       refreshToken: tokens.refreshToken,
     };
