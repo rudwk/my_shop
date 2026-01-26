@@ -29,6 +29,7 @@ export class OrdersService {
     private readonly userService: UserService,
   ) {}
 
+  // 결제 
   async payment(userId: number) {
     const cartItems = await this.cartService.getCart(userId);
     if (cartItems.length === 0) {
@@ -39,6 +40,7 @@ export class OrdersService {
     return { message: '결제 처리 로직이 아직 구현되지 않았습니다.' };
   }
 
+  //주문 내역 조회
   findAll(userId: number) {
     return this.orderRepository.find({
       where: { user: { id: userId } },
@@ -46,7 +48,7 @@ export class OrdersService {
     });
   }
 
-
+ //주문 상태 수정
   async updateStatus(orderId: number, status: OrderStatus, isAdmin: boolean) {
     const order = await this.orderRepository.findOne({
       where: { id: orderId },
@@ -61,6 +63,7 @@ export class OrdersService {
     return this.orderRepository.save(order);
   }
 
+  //주문 취소
   async cancel(orderId: number, userId: number, isAdmin: boolean) {
     const order = await this.orderRepository.findOne({
       where: { id: orderId },

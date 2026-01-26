@@ -13,6 +13,8 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { User } from './entities/user.entity';
 import { userDTO } from './dto/user.dto';
+import { InjectRedis } from '@nestjs-modules/ioredis';
+import Redis from 'ioredis';
 import * as bcrypt from 'bcrypt';
 import * as dotenv from 'dotenv';
 
@@ -24,6 +26,7 @@ export class UserService {
     @InjectRepository(User)
     private readonly userRepository: Repository<User>,
     private readonly jwtService: JwtService,
+    @InjectRedis() private readonly redis: Redis,
   ) {}
 
 //회원가입
@@ -97,6 +100,8 @@ export class UserService {
       secret: process.env.JWT_SECRET_REFRESH,
       expiresIn: '7d',
     });
+
+    this.redis.set(`refreshToken:${userId}`, refreshToken, 'EX', 7 * 24 * 60 * 60); // 7일
 
     return { accessToken, refreshToken };
   }

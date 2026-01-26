@@ -17,7 +17,7 @@ export class ProductsService {
   ) {}
 
   async create(dto: productDTO.createProduct, role: string) {
-    if (role !== 'ADMIN') {
+    if (role !== 'ADMIN' && role !== 'SELLER') {
       throw new ForbiddenException('상품 등록 권한이 없습니다.');
     }
 
