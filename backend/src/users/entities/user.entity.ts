@@ -31,4 +31,9 @@ export class User {
 
   @OneToMany(() => Order, (order) => order.user, {cascade: true})
   orders: Order;
+
+  @BeforeInsert()
+  private beforeInsert() {
+    this.password = bcrypt.hashSync(this.password, 10);
+  }
 }
