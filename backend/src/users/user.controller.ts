@@ -1,7 +1,6 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete, ConflictException, HttpStatus, Query, NotFoundException, UseGuards } from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, Param, Delete, ConflictException, HttpStatus, Query, NotFoundException, UseGuards, Req } from '@nestjs/common';
 import { UserService } from './user.service';
 import { userDTO } from './dto/user.dto';
-import { CurrentUser } from 'src/auth/common/user.decorator';
 import { JwtAuthGuard } from 'src/auth/jwt/jwt-auth.guard';
 import { UserResponseDto } from './dto/user-response.dto';
 
@@ -38,13 +37,13 @@ export class UserController {
 
   @UseGuards(JwtAuthGuard)
   @Patch(':id')
-  async update(@CurrentUser() user, @Param("id")userId, @Body()updateDto: userDTO.update){
-    return this.userService.update(userId, updateDto, user);
+  async update(@Req() req, @Param("id")userId, @Body()updateDto: userDTO.update){
+    return this.userService.update(userId, updateDto, req.user);
   }
 
   @UseGuards(JwtAuthGuard)
   @Delete(':id')
-  delete(@Param('id')id: number, @CurrentUser()user){
-    return this.userService.delete(id, user);
+  delete(@Param('id')id: number, @Req() req){
+    return this.userService.delete(id, req.user);
   }
 }

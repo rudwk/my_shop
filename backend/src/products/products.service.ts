@@ -25,7 +25,8 @@ export class ProductsService {
       const product = this.productRepository.create(dto);
       await this.productRepository.save(product);
       return { message: '상품이 등록되었습니다.' };
-    } catch {
+    } catch(e) {
+      console.log(e);
       throw new InternalServerErrorException('상품 생성 실패');
     }
   }
@@ -59,7 +60,7 @@ export class ProductsService {
     dto: productDTO.updateProduct,
     role: string,
   ) {
-    if (role !== 'ADMIN') {
+    if (role !== 'ADMIN' && role !== 'SELLER') {
       throw new ForbiddenException('상품 수정 권한이 없습니다.');
     }
 
@@ -72,7 +73,7 @@ export class ProductsService {
   }
 
   async remove(productId: number, role: string) {
-    if (role !== 'ADMIN') {
+    if (role !== 'ADMIN' && role !== 'SELLER') {
       throw new ForbiddenException('상품 삭제 권한이 없습니다.');
     }
 

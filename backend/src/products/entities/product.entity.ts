@@ -1,3 +1,4 @@
+import { IsEmail, IsNotEmpty, IsString, Length } from "class-validator";
 import { Cart } from "src/cart/entities/cart.entity";
 import { OrderItem } from "src/orders/entities/order-item.entity";
 import { Order } from "src/orders/entities/order.entity";
@@ -12,6 +13,7 @@ export class Product {
   name: string;
 
   @Column()
+  @IsString()
   description: string;
 
   @Column()

@@ -9,6 +9,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Cart } from './entities/cart.entity';
 import { Repository } from 'typeorm';
 import { ProductsService } from 'src/products/products.service';
+import { response } from 'express';
 
 @Injectable()
 export class CartService {
@@ -49,16 +50,29 @@ export class CartService {
       });
     }
 
-    return this.cartRepository.save(item);
+    await this.cartRepository.save(item);
+    return {
+      cartItemId: item.id,
+      quantity: item.quantity,
+      product: item.product,
+    }
   }
 
+  // 장바구니 아이템 조회
   async getCart(userId: number) {
-    return this.cartRepository.find({
+    const items = await this.cartRepository.find({
       where: { user: { id: userId } },
       relations: ['user', 'product'],
     });
+    const responseItems: CartDTO.cartResponseDto[] = items.map((item) => ({
+      cartItemId: item.id,
+      quantity: item.quantity,
+      product: item.product,
+    }));
+    return responseItems;  
   }
 
+  // 장바구니 아이템 상세 조회
   private async findItem(userId: number, productId: number) {
     return this.cartRepository.findOne({
       where: {
@@ -94,8 +108,8 @@ export class CartService {
 
   async clear(userId: number) {
     const items = await this.getCart(userId);
-    if (items.length) {
-      await this.cartRepository.remove(items);
-    }
+    items.forEach(element => {
+      this.remove(userId, element.product.id);
+    });
   }
 }
