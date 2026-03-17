@@ -37,7 +37,7 @@ export class ProductsController {
   @UseGuards(JwtAuthGuard)
   @Delete(':id')
   async remove(@Param('id') id: string, @Req() req) {
-    return this.productsService.remove(+id, req.user.role);
+    console.log(req.user);
     return await this.productsService.remove(+id, req.user.role);
   }
 }
