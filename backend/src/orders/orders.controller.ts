@@ -1,7 +1,6 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete, ParseIntPipe, UseGuards } from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, Param, Delete, ParseIntPipe, UseGuards, Req } from '@nestjs/common';
 import { OrdersService } from './orders.service';
 import { JwtAuthGuard } from 'src/auth/jwt/jwt-auth.guard';
-import { CurrentUser } from 'src/auth/common/user.decorator';
 import { OrderStatus } from './entities/order.entity';
 
 @Controller('order')
@@ -10,27 +9,27 @@ export class OrdersController {
 
   @UseGuards(JwtAuthGuard)
   @Post('/payment')
-  checkout(@CurrentUser()user) {
-    return this.ordersService.payment(user.id);
+  checkout(@Req() req, @Param('resultCode') result: string) {
+    return this.ordersService.payment(req.user.id);
   }
 
   @UseGuards(JwtAuthGuard)
   @Get()
-  findAll(@CurrentUser()user) {
-    return this.ordersService.findAll(user.id);
+  findAll(@Req() req) {
+    return this.ordersService.findAll(req.user.id);
   }
 
   @UseGuards(JwtAuthGuard)
   @Patch(':orderId/status/:status')
-  updateStatus(@CurrentUser()user, @Param('orderId', ParseIntPipe)orderId: number, @Param("status")status: OrderStatus){
-    const isAdmin = user.role === "ADMIN"
+  updateStatus(@Req() req, @Param('orderId', ParseIntPipe)orderId: number, @Param("status")status: OrderStatus){
+    const isAdmin = req.user.role === "ADMIN"
     return this.ordersService.updateStatus(orderId, status, isAdmin);
   }
 
   @UseGuards(JwtAuthGuard)
   @Patch("/:orderId/cancel")
-  cancel(@CurrentUser() user, @Param('orderId')orderId: number){
-    const isAdmin = user.role === 'ADMIN';
-    return this.ordersService.cancel(orderId, user.id, isAdmin)
+  cancel(@Req() req, @Param('orderId')orderId: number){
+    const isAdmin = req.user.role === 'ADMIN';
+    return this.ordersService.cancel(orderId, req.user.id, isAdmin)
   }
 }
