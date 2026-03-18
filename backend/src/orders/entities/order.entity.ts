@@ -19,8 +19,8 @@ export class Order {
   @Column()
   total: number;
 
-  @Column({default: OrderStatus.PENDING})
-  status: string;
+  @Column({ type: 'enum', enum: OrderStatus, default: OrderStatus.PENDING })
+  status: OrderStatus;
 
   @CreateDateColumn()
   orderedAt: Date;

@@ -1,0 +1,879 @@
+﻿openapi: 3.0.3
+info:
+  title: My Shop API
+  version: 0.1.0
+  description: |
+    API specification derived from the current NestJS implementation under `backend/src`.
+
+    Notes:
+    - Auth uses a Bearer JWT in the `Authorization` header.
+    - Some responses include full User entities (including `password`) due to eager relations.
+      Treat `password` as sensitive and do not display or store it on the client.
+servers:
+  - url: http://localhost:3000
+
+tags:
+  - name: Auth
+  - name: Users
+  - name: Products
+  - name: Cart
+  - name: Orders
+
+paths:
+  /:
+    get:
+      tags: [Auth]
+      summary: Get current user from access token
+      description: |
+        Returns `req.user` after `JwtAuthGuard` validation.
+        Current implementation returns a full `UserEntity`.
+      operationId: getMe
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Current user
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserEntity'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /auth/refresh:
+    get:
+      tags: [Auth]
+      summary: Refresh access token
+      description: |
+        Current implementation uses GET with a JSON request body.
+        Response property name is `accsessToken` (typo preserved).
+
+        Warning: backend implementation currently uses different env var names/redis keys
+        between signin and refresh logic. This endpoint may be unreliable without backend fixes.
+      operationId: refreshAccessToken
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                refreshToken:
+                  type: string
+              required: [refreshToken]
+      responses:
+        '200':
+          description: New access token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AccessTokenResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /user/signup:
+    post:
+      tags: [Users]
+      summary: Sign up
+      operationId: signup
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SignUpRequest'
+      responses:
+        '201':
+          description: Token pair
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TokenPair'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /user/signin:
+    post:
+      tags: [Users]
+      summary: Sign in
+      operationId: signin
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SignInRequest'
+      responses:
+        '201':
+          description: Token pair
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TokenPair'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /user/find:
+    get:
+      tags: [Users]
+      summary: Find user(s)
+      description: |
+        Query by `id`, `email`, or `name`.
+        - If `id` is provided: returns a single `UserResponse`.
+        - Else if `email` is provided: returns a single `UserResponse`.
+        - Else if `name` is provided: returns `UserResponse[]`.
+      operationId: findUser
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: query
+          name: id
+          schema:
+            type: integer
+          required: false
+        - in: query
+          name: email
+          schema:
+            type: string
+            format: email
+          required: false
+        - in: query
+          name: name
+          schema:
+            type: string
+          required: false
+      responses:
+        '200':
+          description: UserResponse or UserResponse[]
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - $ref: '#/components/schemas/UserResponse'
+                  - type: array
+                    items:
+                      $ref: '#/components/schemas/UserResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /user/find/all:
+    get:
+      tags: [Users]
+      summary: List all users
+      operationId: listUsers
+      responses:
+        '200':
+          description: UserResponse[]
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/UserResponse'
+
+  /user/{id}:
+    patch:
+      tags: [Users]
+      summary: Update user
+      operationId: updateUser
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserUpdateRequest'
+      responses:
+        '200':
+          description: Update result
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessageResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    delete:
+      tags: [Users]
+      summary: Delete user
+      operationId: deleteUser
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Delete result
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessageResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /products/find/all:
+    get:
+      tags: [Products]
+      summary: List all products
+      operationId: listProducts
+      responses:
+        '200':
+          description: Product[]
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Product'
+
+  /products/find:
+    get:
+      tags: [Products]
+      summary: Find product(s)
+      description: |
+        Query by `id` or `name`.
+        If neither is provided, returns all products.
+
+        This endpoint is protected by JWT in the current implementation.
+      operationId: findProduct
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: query
+          name: id
+          schema:
+            type: integer
+          required: false
+        - in: query
+          name: name
+          schema:
+            type: string
+          required: false
+      responses:
+        '200':
+          description: Product or Product[]
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - $ref: '#/components/schemas/Product'
+                  - type: array
+                    items:
+                      $ref: '#/components/schemas/Product'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /products/add:
+    post:
+      tags: [Products]
+      summary: Create product (ADMIN/SELLER)
+      operationId: createProduct
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ProductCreateRequest'
+      responses:
+        '201':
+          description: Create result
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessageResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /products/{id}:
+    patch:
+      tags: [Products]
+      summary: Update product (ADMIN/SELLER)
+      operationId: updateProduct
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ProductUpdateRequest'
+      responses:
+        '200':
+          description: Update result
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessageResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    delete:
+      tags: [Products]
+      summary: Delete product (ADMIN/SELLER)
+      operationId: deleteProduct
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Delete result
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessageResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /carts/add:
+    post:
+      tags: [Cart]
+      summary: Add item to cart
+      operationId: addCartItem
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CartAddRequest'
+      responses:
+        '201':
+          description: Cart item response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CartItem'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /carts/find:
+    get:
+      tags: [Cart]
+      summary: Get current user's cart
+      operationId: getCart
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: CartItem[]
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/CartItem'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /carts:
+    patch:
+      tags: [Cart]
+      summary: Update cart item quantity
+      operationId: updateCartQuantity
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CartQuantityUpdateRequest'
+      responses:
+        '200':
+          description: Updated cart entity
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CartEntity'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    delete:
+      tags: [Cart]
+      summary: Clear cart
+      operationId: clearCart
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Clear result
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessageResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /carts/{productId}:
+    delete:
+      tags: [Cart]
+      summary: Remove a product from cart
+      operationId: removeCartItem
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: productId
+          required: true
+          schema:
+            type: integer
+      responses:
+        '204':
+          description: Removed
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /order/payment:
+    post:
+      tags: [Orders]
+      summary: Checkout (payment)
+      description: |
+        Creates an order from current cart items, decrements product stock, clears the cart.
+        Returns an Order entity.
+      operationId: checkout
+      security:
+        - bearerAuth: []
+      responses:
+        '201':
+          description: Created order
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Order'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /order:
+    get:
+      tags: [Orders]
+      summary: List my orders
+      operationId: listOrders
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Order[]
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Order'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /order/{orderId}/status/{status}:
+    patch:
+      tags: [Orders]
+      summary: Update order status (ADMIN only)
+      operationId: updateOrderStatus
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: orderId
+          required: true
+          schema:
+            type: integer
+        - in: path
+          name: status
+          required: true
+          schema:
+            $ref: '#/components/schemas/OrderStatus'
+      responses:
+        '200':
+          description: Updated order
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Order'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /order/{orderId}/cancel:
+    patch:
+      tags: [Orders]
+      summary: Cancel an order
+      operationId: cancelOrder
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: orderId
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Cancelled order
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Order'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  responses:
+    BadRequest:
+      description: Bad request
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    Unauthorized:
+      description: Unauthorized
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    Forbidden:
+      description: Forbidden
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    NotFound:
+      description: Not found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    Conflict:
+      description: Conflict
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    InternalError:
+      description: Internal server error
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+
+  schemas:
+    ErrorResponse:
+      type: object
+      properties:
+        statusCode:
+          type: integer
+          example: 400
+        message:
+          oneOf:
+            - type: string
+            - type: array
+              items:
+                type: string
+          example: Bad Request
+        error:
+          type: string
+          example: Bad Request
+
+    MessageResponse:
+      type: object
+      properties:
+        message:
+          type: string
+      required: [message]
+
+    TokenPair:
+      type: object
+      properties:
+        accessToken:
+          type: string
+        refreshToken:
+          type: string
+      required: [accessToken, refreshToken]
+
+    AccessTokenResponse:
+      type: object
+      properties:
+        accsessToken:
+          type: string
+      required: [accsessToken]
+
+    SignUpRequest:
+      type: object
+      properties:
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+          minLength: 4
+          maxLength: 20
+        name:
+          type: string
+        address:
+          type: string
+      required: [email, password, name, address]
+
+    SignInRequest:
+      type: object
+      properties:
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+          minLength: 4
+          maxLength: 20
+      required: [email, password]
+
+    UserUpdateRequest:
+      type: object
+      properties:
+        password:
+          type: string
+        name:
+          type: string
+        address:
+          type: string
+
+    UserResponse:
+      type: object
+      properties:
+        id:
+          type: integer
+        email:
+          type: string
+          format: email
+        name:
+          type: string
+        address:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+      required: [id, email, name, address, createdAt]
+
+    UserRole:
+      type: string
+      enum: [CUSTOMER, SELLER, ADMIN]
+
+    UserEntity:
+      type: object
+      properties:
+        id:
+          type: integer
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+          description: Hashed password (sensitive)
+          writeOnly: true
+        name:
+          type: string
+        role:
+          $ref: '#/components/schemas/UserRole'
+        address:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+      required: [id, email, name, role, address, createdAt]
+
+    Product:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        description:
+          type: string
+        price:
+          type: number
+        stock:
+          type: integer
+        createdAt:
+          type: string
+          format: date-time
+      required: [id, name, description, price, stock, createdAt]
+
+    ProductCreateRequest:
+      type: object
+      properties:
+        name:
+          type: string
+        description:
+          type: string
+        price:
+          type: number
+        stock:
+          type: integer
+      required: [name, description, price, stock]
+
+    ProductUpdateRequest:
+      type: object
+      properties:
+        name:
+          type: string
+        description:
+          type: string
+        price:
+          type: number
+        stock:
+          type: integer
+
+    CartAddRequest:
+      type: object
+      properties:
+        productId:
+          type: integer
+        quantity:
+          type: integer
+          minimum: 1
+      required: [productId, quantity]
+
+    CartQuantityUpdateRequest:
+      type: object
+      properties:
+        productId:
+          type: integer
+        quantity:
+          type: integer
+          minimum: 1
+      required: [productId, quantity]
+
+    CartItem:
+      type: object
+      properties:
+        cartItemId:
+          type: integer
+        quantity:
+          type: integer
+        product:
+          $ref: '#/components/schemas/Product'
+      required: [cartItemId, quantity, product]
+
+    CartEntity:
+      type: object
+      properties:
+        id:
+          type: integer
+        quantity:
+          type: integer
+        user:
+          $ref: '#/components/schemas/UserEntity'
+        product:
+          $ref: '#/components/schemas/Product'
+      required: [id, quantity, user, product]
+
+    OrderStatus:
+      type: string
+      enum: [PENDING, PAID, SHIPPED, DELIVERED, CANCELLED]
+
+    OrderItem:
+      type: object
+      properties:
+        id:
+          type: integer
+        quantity:
+          type: integer
+        price:
+          type: number
+        product:
+          $ref: '#/components/schemas/Product'
+      required: [id, quantity, price, product]
+
+    Order:
+      type: object
+      properties:
+        id:
+          type: integer
+        total:
+          type: number
+        status:
+          $ref: '#/components/schemas/OrderStatus'
+        orderedAt:
+          type: string
+          format: date-time
+        user:
+          $ref: '#/components/schemas/UserEntity'
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/OrderItem'
+      required: [id, total, status, orderedAt, user, items]
